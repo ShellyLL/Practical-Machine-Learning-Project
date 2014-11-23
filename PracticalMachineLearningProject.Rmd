@@ -62,11 +62,15 @@ testData <- testData[, -c(1:6)]
 ```{r}
 plot(trainData$classe, xlab = "Class Type", ylab = "Counts")
 ```
+
 # Build the Model
 ```{r}
 library(knitr)
+library(Hmisc)
 library(caret)
 library(randomForest)
+library(foreach)
+library(doParallel)
 library(e1071)
 classify <- createDataPartition(y = trainData$classe, p = 0.6, list = FALSE)
 trainData2 <- trainData[classify, ]
@@ -74,12 +78,19 @@ testData2 <- trainData[-classify, ]
 ```
 
 ```{r}
-fitting <- train(classe ~ ., data = trainData2, method = "rf", prox = TRUE)
+# I tried train function in Caret package first, it works but takes very long time. Then I change to parallel analysis method, which saves a lot of time
+# trainInds <- sample(nrow(trainData2), 1000)
+# trainData2<-trainData2[trainInds,]
+# fitting <- train(classe ~ ., data = trainData2, prox = TRUE)
+
+registerDoParallel()
+classe <- trainData2$classe
+variables <- trainData2[-ncol(trainData2)]
+fitting <- foreach(ntree = rep(250, 4), .combine = randomForest::combine, .packages = 'randomForest') %dopar% {
+randomForest(x = trainData2[-ncol(trainData2)], y = trainData2$classe, ntree=ntree) 
+}
 ```
 # Model Evaluation
-```{r}
-fitting
-```
 ## Expected Out of Sample Error 
 ```{r}
 test <- predict(fitting, testData2)
@@ -89,7 +100,7 @@ From this analysis, we can see that the expected out of sample error accurary is
 
 ## Model Test Cases
 ```{r}
-answers <- predict(fitting, TestData)
+answers <- predict(fitting, testData)
 answers <- as.character(answers)
 ```
 Upon submission, 20/20 score was obtained, indicating that this model developed is very help for prediction.
