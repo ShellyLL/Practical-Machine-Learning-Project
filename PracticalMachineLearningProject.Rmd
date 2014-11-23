@@ -1,0 +1,95 @@
+---
+title: "Practical Machine Learning Project"
+output: 
+  html_document:
+    keep_md: true
+---
+==
+By SherryLL Nov 23th, 2014
+---
+
+# Introduction and Synonpsis 
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+
+In this project, my goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+In the project, I developed a model based on random forest algorithm to predict the manner in which they did the exercise. The out of sample error is more than 99%, demonstrating very good prediction. Besides, the model was used to predict 20 different test cases and 20/20 accuracy was obtained. 
+
+# Data Processing
+## Download the data
+```{r}
+setwd("~/Practical-Machine-Learning-Project/")
+if (!"pml-training.csv" %in% dir("./Data/")) {
+    download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "./Data/pml-training.csv")
+}
+if (!"pml-testing.csv" %in% dir("./Data/")) {
+    download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", "./Data/pml-testing.csv")
+}
+```
+## Read the data
+First, read csv format of the data:
+```{r}
+if (!"trainData" %in% ls()) {
+    trainData <- read.csv("./Data/pml-training.csv", sep = ",", na.strings=c("NA",""))
+}
+if (!"testData" %in% ls()) {
+    testData <- read.csv("./Data/pml-testing.csv", sep = ",")
+}
+```
+Second, check the dimensions of the datasets:
+```{r}
+dim(trainData)
+dim(testData)
+```
+## Clean the data
+First, clean the data by removing the NA columns
+```{r}
+colNAnumber <- colSums(is.na(trainData))       
+colNA <- colNAnumber >= 19216  
+trainData <- trainData[!colNA]    
+
+colNAnumber <- colSums(is.na(testData)) 
+colNA <- colNAnumber >= 20    
+testData <- testData[!colNA]
+```
+Second, remove the first 6 columns which are not related to the analysis and modeling
+```{r}
+trainData <- trainData[, -c(1:6)]
+testData <- testData[, -c(1:6)]
+```
+# Exploratory Data Analysis
+```{r}
+plot(trainData$classe, xlab = "Class Type", ylab = "Counts")
+```
+# Build the Model
+```{r}
+library(knitr)
+library(caret)
+library(randomForest)
+library(e1071)
+classify <- createDataPartition(y = trainData$classe, p = 0.6, list = FALSE)
+trainData2 <- trainData[classify, ]
+testData2 <- trainData[-classify, ]
+```
+
+```{r}
+fitting <- train(classe ~ ., data = trainData2, method = "rf", prox = TRUE)
+```
+# Model Evaluation
+```{r}
+fitting
+```
+## Expected Out of Sample Error 
+```{r}
+test <- predict(fitting, testData2)
+confusionMatrix(test, testData2$classe)
+```
+From this analysis, we can see that the expected out of sample error accurary is more than 99%, demonstrating very good prediction.
+
+## Model Test Cases
+```{r}
+answers <- predict(fitting, TestData)
+answers <- as.character(answers)
+```
+Upon submission, 20/20 score was obtained, indicating that this model developed is very help for prediction.
